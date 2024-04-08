@@ -34,7 +34,6 @@ class Worker:
             "hostname": self.hostname,
         })
 
-
     def callback(self, ch, method, properties, body):
         data = json.loads(body)
         task_type_to_handler = {
@@ -50,7 +49,7 @@ class Worker:
         
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
-    def handle_aggregation_task(self, data):
+    def handle_aggregation_task(self, data: dict):
         """
         {
             "task_type": "aggregate",
@@ -95,7 +94,7 @@ class Worker:
         }
         self.publish_message_to_scheduler_queue(message_to_scheduler)
 
-    def handle_average_task(self, data):
+    def handle_average_task(self, data: dict):
         # Read the file, divide each number by the num_original_files value and save the result to a new file.
 
         """
@@ -136,10 +135,10 @@ class Worker:
         }
         self.publish_message_to_scheduler_queue(message_to_scheduler)
 
-    def publish_message_to_scheduler_queue(self, message_data):
+    def publish_message_to_scheduler_queue(self, message_data: dict):
         self.channel.basic_publish(exchange='', routing_key='scheduler_queue', body=json.dumps(message_data))
 
 
 if __name__ == '__main__':
     worker = Worker()
-worker.run()
+    worker.run()

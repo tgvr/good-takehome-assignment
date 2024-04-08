@@ -33,6 +33,7 @@ class WorkerState:
         self.latest_job_id = None
         self.latest_file_indices = []
 
+
 @dataclass
 class JobState:
     job_id: str
@@ -50,6 +51,7 @@ class JobState:
             unprocessed_file_indices=data['unprocessed_file_indices'],
             wip_distribution={}
         )
+
 
 class OrderedWorkerPodsDict(OrderedDict):
     def __setitem__(self, key, value):
@@ -73,13 +75,13 @@ class Scheduler():
 
     def run(self):
         # Start consuming messages
-        print("Listening for messages...")
+        log.info("Listening for messages...")
         self.channel.start_consuming()
 
     def setup_initial_state(self):
         self.worker_pods = OrderedWorkerPodsDict()
-        self.jobs = {}
-        self.tmp_jobs_completed = []
+        self.jobs: dict[str, JobState] = {}
+        self.tmp_jobs_completed: list[str] = []
 
     def setup_mq_loop(self):
         # Connect to local queue
@@ -90,7 +92,7 @@ class Scheduler():
         self.channel.queue_declare(queue='scheduler_queue')
         self.channel.basic_consume(queue='scheduler_queue', on_message_callback=self.callback, auto_ack=False)
 
-    def handle_worker_added(self, data):
+    def handle_worker_added(self, data: dict):
         # A new worker node has made itself visible. Add it to the list of workers. Connect to its queue. Initialize with a 0 throughput.
 
         """
@@ -100,19 +102,19 @@ class Scheduler():
         }
         """
 
-        print(f"Worker {data['hostname']} added")
+        log.info(f"Worker {data['hostname']} added")
 
         worker_state = WorkerState.from_data(data)
         self.worker_pods[worker_state.hostname] = worker_state
 
         self.delegate_tasks()
 
-    def handle_worker_removed(self, hostname):
+    def handle_worker_removed(self, hostname: str):
         # We found out that the worker is no longer available. If any work was in progress on this node, reset that. Remove the worker from the list of workers.
 
-        print(f"Worker {hostname} removed")
+        log.info(f"Worker {hostname} removed")
 
-        worker_state = self.worker_pods[hostname]
+        worker_state: WorkerState = self.worker_pods[hostname]
         job_id = worker_state.latest_job_id
         file_indices = worker_state.latest_file_indices
         if job_id and file_indices:
@@ -122,7 +124,7 @@ class Scheduler():
         
         del self.worker_pods[hostname]
 
-    def handle_worker_completed(self, data):
+    def handle_worker_completed(self, data: dict):
         # A worker has completed a task. Update the worker's throughput, re-sort the list of workers and add the next task to the worker.
 
         """
@@ -136,14 +138,14 @@ class Scheduler():
         }
         """
 
-        print(f"Worker {data['hostname']} completed, data: {json.dumps(data)} further processing...")
+        log.info(f"Worker {data['hostname']} completed, data: {json.dumps(data)} further processing...")
 
         num_ops = data['num_ops']
         execution_time = data['execution_time']
         hostname = data['hostname']
         output_file_index = data['output_file_index']
 
-        worker_state = self.worker_pods[hostname]
+        worker_state: WorkerState = self.worker_pods[hostname]
         worker_state.handle_worker_completion(num_ops, execution_time)
         self.worker_pods.sort_by_value()
 
@@ -154,7 +156,7 @@ class Scheduler():
         worker_state.reset_job_info()
         self.delegate_tasks()
 
-    def handle_job_added(self, data):
+    def handle_job_added(self, data: dict):
         # A new job has been added. Add it to the list of jobs. Delegate tasks to workers.
 
         """
@@ -169,12 +171,12 @@ class Scheduler():
 
         job_state = JobState.from_data(data)
         self.jobs[job_state.job_id] = job_state
-        print(f"Job {job_state.job_id} added")
+        log.info(f"Job {job_state.job_id} added")
 
         self.delegate_tasks()
 
-    def handle_job_completed(self, job_id):
-        print(f"Job {job_id} completed, further processing...")
+    def handle_job_completed(self, job_id: str):
+        log.info(f"Job {job_id} completed, further processing...")
 
         url = "http://backend:8000/api/notify_job_completed"
         data = {
@@ -183,9 +185,9 @@ class Scheduler():
         response = requests.post(url, json=data)
 
         if response.status_code == 200:
-            print(f"Job {job_id} completion notification sent successfully")
+            log.info(f"Job {job_id} completion notification sent successfully")
         else:
-            print(f"Failed to send job {job_id} completion notification")
+            log.info(f"Failed to send job {job_id} completion notification")
 
         self.tmp_jobs_completed.append(job_id)
 
@@ -193,8 +195,8 @@ class Scheduler():
         # Taking input as self.jobs and self.worker_pods, delegate tasks to workers till there are no workers available. Also, figure out if a job is completed.
 
         free_workers = [hostname for hostname, worker_state in self.worker_pods.items() if worker_state.status == 'idle']
-        print(f"Length of free workers: {len(free_workers)}")
-        print(f"Length of jobs: {len(self.jobs)}")
+        log.info(f"Length of free workers: {len(free_workers)}")
+        log.info(f"Length of jobs: {len(self.jobs)}")
 
         if not self.jobs:
             return
@@ -203,7 +205,7 @@ class Scheduler():
             if not free_workers:
                 return
 
-            print('p3')
+            log.info('p3')
             # Case 1: Job has no unprocessed files (assert that it has a wip_distribution)
             if not job_state.unprocessed_file_indices:
                 assert job_state.wip_distribution
@@ -241,8 +243,8 @@ class Scheduler():
                 del self.jobs[job_id]
             self.tmp_jobs_completed = []
 
-    def schedule_task_to_worker(self, job_id, hostname, task_type):
-        print(f"Scheduling task {task_type} for job {job_id} to worker {hostname}")
+    def schedule_task_to_worker(self, job_id: str, hostname: str, task_type: str):
+        log.info(f"Scheduling task {task_type} for job {job_id} to worker {hostname}")
 
         max_indices_per_worker = 5
         job_state = self.jobs[job_id]
@@ -254,7 +256,7 @@ class Scheduler():
             'task_type': task_type,
             'num_original_files': job_state.num_original_files,
         }
-        worker_state = self.worker_pods[hostname]
+        worker_state: WorkerState = self.worker_pods[hostname]
         self.publish_message_to_worker_queue(hostname, message_data)
         worker_state.latest_job_id = job_id
         worker_state.latest_file_indices = file_indices
@@ -263,7 +265,7 @@ class Scheduler():
         job_state.wip_distribution[hostname] = file_indices
         job_state.unprocessed_file_indices = job_state.unprocessed_file_indices[max_indices_per_worker:]
 
-    def callback(self, ch, method, properties, body):
+    def callback(self, ch, method, properties, body):        
         data = json.loads(body)
         message_type_to_handler = {
             'worker_added': self.handle_worker_added,
@@ -279,10 +281,11 @@ class Scheduler():
         
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
-    def publish_message_to_worker_queue(self, hostname, message_data):
+    def publish_message_to_worker_queue(self, hostname: str, message_data: dict):
         data = json.dumps(message_data)
-        print(f"Publishing message {data} to worker {hostname}")
+        log.info(f"Publishing message {data} to worker {hostname}")
         self.channel.basic_publish(exchange='', routing_key=f'worker_{hostname}_queue', body=data)
+
 
 if __name__ == '__main__':
     scheduler = Scheduler()
