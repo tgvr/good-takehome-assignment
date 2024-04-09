@@ -21,3 +21,5 @@ docker run -d -p 5001:5000 --restart=always --name registry registry:2
 
 ./start.sh
 ```
+
+You can access the web ui at http://localhost:8080
