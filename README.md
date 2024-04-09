@@ -10,31 +10,16 @@ This repo contains my code for a short yet good takehome assignment from a early
 - Building and deploying containerized applications (using Docker).
 - Some barebones level of SQL code.
 - Modelling HLD given the problem statement and comparing and contrasting tradeoffs between potential approaches.
+- Storing certain type of data in Redis
 
 ## Instructions:
 
-First, have a working Docker setup.
+First, have a working Docker setup. `docker` and `docker compose` should be working in your CLI.
 
 ```bash
 git clone https://github.com/tgvr/good-takehome-assignment.git
 cd ./good-takehome-assignment
 docker run -d -p 5001:5000 --restart=always --name registry registry:2
 
-# Build the worker container image
-docker build -t localhost:5001/worker-img ./worker/
-docker push localhost:5001/worker-img
-
-# Backend
-docker build -t localhost:5001/backend-img ./backend/
-docker push localhost:5001/backend-img
-
-# Webapp
-docker build -t localhost:5001/webapp-img ./webapp/
-docker push localhost:5001/webapp-img
-
-# Scheduler
-docker build -t localhost:5001/scheduler-img ./scheduler/
-docker push localhost:5001/scheduler-img
-
-docker compose up -d
+./start.sh
 ```
