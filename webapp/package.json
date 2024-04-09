@@ -13,7 +13,8 @@
     "react": "latest",
     "react-dom": "latest",
     "@mui/icons-material": "latest", 
-    "@mui/x-charts": "latest"
+    "@mui/x-charts": "latest",
+    "@mui/x-data-grid": "latest"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "latest",

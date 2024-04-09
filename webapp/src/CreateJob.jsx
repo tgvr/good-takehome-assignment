@@ -6,6 +6,32 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 
+const onSubmit = async (event) => {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  const formJson = Object.fromEntries(formData.entries());
+
+  try {
+      const response = await fetch('http://localhost:8000/api/create_job', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formJson),
+      });
+
+      if (response.ok) {
+          const txt = await response.text();
+          console.log(txt);
+          toggleModal();
+      } else {
+          console.error('Error:', response.status);
+      }
+  } catch (error) {
+      console.error('Error:', error);
+  }
+}
+
 export default function CreateJob(props) {
   const { open, toggleModal } = props;
 
@@ -19,31 +45,7 @@ export default function CreateJob(props) {
         onClose={toggleModal}
         PaperProps={{
           component: 'form',
-          onSubmit: async (event) => {
-            event.preventDefault();
-            const formData = new FormData(event.currentTarget);
-            const formJson = Object.fromEntries(formData.entries());
-
-            try {
-                const response = await fetch('http://localhost:8000/api/create_job', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formJson),
-                });
-
-                if (response.ok) {
-                    const txt = await response.text();
-                    console.log(txt);
-                    toggleModal();
-                } else {
-                    console.error('Error:', response.status);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-            }
-          },
+          onSubmit: onSubmit
         }}
       >
         <DialogTitle>Create new Job</DialogTitle>
