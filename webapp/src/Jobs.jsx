@@ -3,9 +3,9 @@ import Title from './Title';
 import { DataGrid } from '@mui/x-data-grid';
 
 const columns = [
-  { field: 'jobId', headerName: 'Job ID', width: 150 },
-  { field: 'numValues', headerName: 'Number of values per file', width: 200 },
-  { field: 'numFiles', headerName: 'Number of files', width: 150 },
+  { field: 'jobid', headerName: 'Job ID', width: 330 },
+  { field: 'numvalues', headerName: 'Number of values per file', width: 200 },
+  { field: 'numfiles', headerName: 'Number of files', width: 150 },
   { field: 'status', headerName: 'Status', width: 150 },
 ];
 

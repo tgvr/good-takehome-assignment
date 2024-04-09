@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useEffect } from 'react';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
@@ -21,9 +22,35 @@ const defaultTheme = createTheme({
 
 export default function Dashboard() {
   const [openCreateModal, setOpenCreateModal] = React.useState(false);
+  const [appState, setAppState] = React.useState(
+    {
+      numCompletedJobs: 0,
+      numPendingJobs: 0,
+      numWorkers: 0,
+      jobs: [],
+      workers: [],
+    }
+  );
   const toggleCreateModal = () => {
     setOpenCreateModal(!openCreateModal);
   }
+
+  const getApplicationState = async () => {
+    const res = await fetch("http://localhost:8000/api/get_application_state");
+    const data = await res.json();
+    setAppState({
+      ...appState,
+      ...data,
+      jobs: data.jobs.map((job) => {return {id: job.jobid, ...job}}),
+    });
+    console.log(data);
+    console.log(appState);
+  };
+
+  useEffect(() => {
+    const timer = setInterval(getApplicationState, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <ThemeProvider theme={defaultTheme}>
@@ -68,7 +95,7 @@ export default function Dashboard() {
                     height: 332,
                   }}
                 >
-                  <Jobs rows={[]} />
+                  <Jobs rows={appState.jobs} />
                 </Paper>
               </Grid>
               {/* Stats */}
@@ -81,13 +108,17 @@ export default function Dashboard() {
                     height: 332,
                   }}
                 >
-                  <Stats numCompletedJobs={"0"} numPendingJobs={"0"} numWorkers={"0"} />
+                  <Stats 
+                    numCompletedJobs={appState.numCompletedJobs} 
+                    numPendingJobs={appState.numPendingJobs} 
+                    numWorkers={appState.numWorkers} 
+                  />
                 </Paper>
               </Grid>
               {/* Workers */}
               <Grid item xs={12}>
                 <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', height: 332 }}>
-                  <Workers rows={[]} />
+                  <Workers rows={appState.workers} />
                 </Paper>
               </Grid>
             </Grid>

@@ -6,7 +6,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 
-const onSubmit = async (event) => {
+const onSubmit = async (event, toggleModal) => {
   event.preventDefault();
   const formData = new FormData(event.currentTarget);
   const formJson = Object.fromEntries(formData.entries());
@@ -45,7 +45,7 @@ export default function CreateJob(props) {
         onClose={toggleModal}
         PaperProps={{
           component: 'form',
-          onSubmit: onSubmit
+          onSubmit: (e) => onSubmit(e, toggleModal)
         }}
       >
         <DialogTitle>Create new Job</DialogTitle>

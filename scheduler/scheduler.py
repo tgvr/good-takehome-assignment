@@ -3,12 +3,13 @@ import logging
 import pika
 import requests
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from decimal import Decimal
 from typing import Optional
+import redis
 
 log = logging.getLogger(__name__)
-
+r = redis.Redis(host='redis', port=6379)
 @dataclass
 class WorkerState:
     hostname: str
@@ -19,20 +20,37 @@ class WorkerState:
     
     @classmethod
     def from_data(cls, data) -> 'WorkerState':
-        return WorkerState(
+        worker_state = WorkerState(
             hostname=data['hostname'],
             throughput=Decimal(0),
             status='idle'
         )
+        worker_state.store_in_redis()
+        return worker_state
+
+    def store_in_redis(self):
+        try:
+            worker_state_dict = asdict(self)
+            worker_state_dict['throughput'] = str(worker_state_dict['throughput'])
+            r.set(self.hostname, json.dumps(worker_state_dict))
+        except Exception as e:
+            log.error(f"Failed to set worker state in redis: {e}")
 
     def handle_worker_completion(self, num_ops, execution_time):
         self.throughput = Decimal(num_ops) / Decimal(execution_time)
         self.status = 'idle'
+        self.store_in_redis()
 
     def reset_job_info(self):
         self.latest_job_id = None
         self.latest_file_indices = []
-
+        self.store_in_redis()
+    
+    def set_job_info(self, job_id, file_indices):
+        self.latest_job_id = job_id
+        self.latest_file_indices = file_indices
+        self.status = 'busy'
+        self.store_in_redis()
 
 @dataclass
 class JobState:
@@ -257,9 +275,7 @@ class Scheduler():
         }
         worker_state: WorkerState = self.worker_pods[hostname]
         self.publish_message_to_worker_queue(hostname, message_data)
-        worker_state.latest_job_id = job_id
-        worker_state.latest_file_indices = file_indices
-        worker_state.status = 'busy'
+        worker_state.set_job_info(job_id, file_indices)
 
         job_state.wip_distribution[hostname] = file_indices
         job_state.unprocessed_file_indices = job_state.unprocessed_file_indices[max_indices_per_worker:]

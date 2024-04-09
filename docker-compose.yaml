@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: backend_db
     volumes:
-      - ./mnt/data/postgres/data:/var/lib/postgresql/data
+      #   - ./mnt/data/postgres/data:/var/lib/postgresql/data
       - ./mnt/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   backend:
@@ -19,6 +19,7 @@ services:
       - 8000:8000
     depends_on:
       - postgres_db
+      - redis
     volumes:
       - ./mnt/data/jobs:/data/jobs
       - /var/run/docker.sock:/var/run/docker.sock
@@ -28,6 +29,13 @@ services:
     hostname: rabbitmq
     restart: unless-stopped
 
+  redis:
+    image: redis
+    hostname: redis
+    restart: unless-stopped
+    volumes:
+      - ./mnt/data/redis/data:/data
+
   worker:
     image: localhost:5001/worker-img
     restart: unless-stopped
@@ -35,6 +43,7 @@ services:
       - PYTHONUNBUFFERED=1
     depends_on:
       - rabbitmq
+      - scheduler
     volumes:
       - ./mnt/data/jobs:/data/jobs
     deploy:
@@ -47,7 +56,7 @@ services:
       - PYTHONUNBUFFERED=1
     depends_on:
       - rabbitmq
-      - worker
+      - redis
 
   webapp:
     image: localhost:5001/webapp-img

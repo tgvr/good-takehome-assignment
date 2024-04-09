@@ -25,7 +25,7 @@ const pool = new Pool({
 });
 const docker = new Docker();
 
-async function createJobRecord(numValues, numFiles) {
+const createJobRecord = async (numValues, numFiles) => {
     const client = await pool.connect();
     try {
       const res = await client.query('INSERT INTO jobs (numValues, numFiles, status) VALUES ($1, $2, $3) RETURNING *', [numValues, numFiles, 'pending_files_creation']);
@@ -37,7 +37,7 @@ async function createJobRecord(numValues, numFiles) {
     }
 }
 
-async function updateJobStatus(jobId, status) {
+const updateJobStatus = async (jobId, status) => {
     const client = await pool.connect();
     try {
       await client.query('UPDATE jobs SET status = $1 WHERE jobId = $2', [status, jobId]);
@@ -48,7 +48,7 @@ async function updateJobStatus(jobId, status) {
     }
 }
 
-async function createFiles(numValues, numFiles, jobId) {
+const createFiles = async (numValues, numFiles, jobId) => {
     const directoryPath = path.join('/data/jobs', jobId);
     if (!existsSync(directoryPath)) {
         mkdirSync(directoryPath, { recursive: true });
@@ -70,7 +70,7 @@ async function createFiles(numValues, numFiles, jobId) {
     return { fileIdentifiers };
 }
 
-async function sendMessageToQueue(messageToScheduler) {
+const sendMessageToQueue = async (messageToScheduler) => {
     try {
         const connection = await amqp.connect('amqp://rabbitmq');
         const channel = await connection.createChannel();
@@ -85,6 +85,11 @@ async function sendMessageToQueue(messageToScheduler) {
     }
 }
 
+const getNumberOfWorkerContainers = async () => {
+    const containers = await docker.listContainers();
+    const filteredContainers = containers.filter(container => container.Image === "localhost:5001/worker-img");
+    return filteredContainers.length;
+};
 
 app.get('/', (req, res) => res.send('Dockerizing Node Application')) 
 
@@ -131,10 +136,7 @@ app.post('/api/set_num_workers', async (req, res) => {
         return;
     }
 
-    const containers = await docker.listContainers();
-    const filteredContainers = containers.filter(container => container.Image === "localhost:5001/worker-img");
-    const numContainers = filteredContainers.length;
-
+    const numContainers = await getNumberOfWorkerContainers();
     if (numWorkers < numContainers) {
         res.status(400).json({ error: 'Number of worker containers cannot be less than the current number of replicas.' });
         return;
@@ -160,4 +162,18 @@ app.post('/api/set_num_workers', async (req, res) => {
     }
 
     res.status(200).json({ numWorkers });
+});
+
+app.get('/api/get_application_state', async (req, res) => {
+    const numWorkers = await getNumberOfWorkerContainers();
+    const jobs = await pool.query('SELECT * FROM jobs');
+    const numCompletedJobs = jobs.rows.filter(job => job.status === 'completed').length;
+    const numPendingJobs = jobs.rows.filter(job => job.status !== 'completed').length;
+    res.status(200).json({
+        numWorkers,
+        numCompletedJobs,
+        numPendingJobs,
+        jobs: jobs.rows,
+        workers: [],
+    });
 });
