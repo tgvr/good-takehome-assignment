@@ -6,11 +6,16 @@ const path = require('path');
 const amqp = require('amqplib');
 const { v4: uuidv4 } = require('uuid');
 const Docker = require('dockerode');
+const cors = require('cors');
 
-const app = express(); 
+const app = express();
 
-app.use(urlencoded({ extended: true })) 
-app.use(json()) 
+app.use(urlencoded({ extended: true }))
+app.use(json())
+app.use(cors({
+    origin: '*'
+}))
+
 const pool = new Pool({
     user: 'admin',
     host: 'postgres_db',
@@ -86,7 +91,9 @@ app.get('/', (req, res) => res.send('Dockerizing Node Application'))
 app.listen(8000, () => console.log(`[bootup]: Server is running at port: 8000`));
 
 app.post('/api/create_job', async (req, res) => {
-    const { numValues, numFiles } = req.body;
+    let { numValues, numFiles } = req.body;
+    numValues = parseInt(numValues);
+    numFiles = parseInt(numFiles);
     if (!Number.isInteger(numValues) || !Number.isInteger(numFiles) || numValues <= 0 || numFiles <= 0) {
         res.status(400).json({ error: 'Invalid input. numValues and numFiles must be positive numbers.' });
         return;

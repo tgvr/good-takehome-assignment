@@ -15,6 +15,7 @@
         "uuid": "latest",
         "path": "latest",
         "amqplib": "latest",
-        "dockerode": "latest"
+        "dockerode": "latest",
+        "cors": "latest"
     }
 }

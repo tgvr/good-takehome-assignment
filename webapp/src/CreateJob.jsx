@@ -25,7 +25,7 @@ export default function CreateJob(props) {
             const formJson = Object.fromEntries(formData.entries());
 
             try {
-                const response = await fetch('http://backend:8000/api/create_job', {
+                const response = await fetch('http://localhost:8000/api/create_job', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
