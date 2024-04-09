@@ -7,6 +7,7 @@ const amqp = require('amqplib');
 const { v4: uuidv4 } = require('uuid');
 const Docker = require('dockerode');
 const cors = require('cors');
+const { createClient } = require('redis');
 
 const app = express();
 
@@ -24,6 +25,15 @@ const pool = new Pool({
     port: 5432,
 });
 const docker = new Docker();
+const redisClient = createClient({
+    url: 'redis://redis:6379'
+});
+
+redisClient.on('error', err => console.log('Redis Client Error', err));
+redisClient.connect().catch(err => {
+    console.error('Failed to connect to Redis:', err);
+});
+
 
 const createJobRecord = async (numValues, numFiles) => {
     const client = await pool.connect();
@@ -78,17 +88,15 @@ const sendMessageToQueue = async (messageToScheduler) => {
 
         await channel.assertQueue(queue, { durable: false });
         await channel.sendToQueue(queue, Buffer.from(JSON.stringify(messageToScheduler)));
-
-        console.log(`Message sent to queue: ${JSON.stringify(messageToScheduler)}`);
     } catch (err) {
         console.error(err);
     }
 }
 
-const getNumberOfWorkerContainers = async () => {
+const getWorkerContainers = async () => {
     const containers = await docker.listContainers();
     const filteredContainers = containers.filter(container => container.Image === "localhost:5001/worker-img");
-    return filteredContainers.length;
+    return filteredContainers;
 };
 
 app.get('/', (req, res) => res.send('Dockerizing Node Application')) 
@@ -130,13 +138,15 @@ app.post('/api/notify_job_completed', async (req, res) => {
 });
 
 app.post('/api/set_num_workers', async (req, res) => {
-    const { numWorkers } = req.body;
+    let { numWorkers } = req.body;
+    numWorkers = parseInt(numWorkers);
     if (!Number.isInteger(numWorkers) || numWorkers <= 0) {
         res.status(400).json({ error: 'Invalid input. numWorkers must be a positive number.' });
         return;
     }
 
-    const numContainers = await getNumberOfWorkerContainers();
+    const workerContainers = await getWorkerContainers();
+    const numContainers = workerContainers.length;
     if (numWorkers < numContainers) {
         res.status(400).json({ error: 'Number of worker containers cannot be less than the current number of replicas.' });
         return;
@@ -165,15 +175,36 @@ app.post('/api/set_num_workers', async (req, res) => {
 });
 
 app.get('/api/get_application_state', async (req, res) => {
-    const numWorkers = await getNumberOfWorkerContainers();
+    const workerContainers = await getWorkerContainers();
     const jobs = await pool.query('SELECT * FROM jobs');
     const numCompletedJobs = jobs.rows.filter(job => job.status === 'completed').length;
     const numPendingJobs = jobs.rows.filter(job => job.status !== 'completed').length;
+    const numWorkers = workerContainers.length;
+    const workers = [];
+    for (const container of workerContainers) {
+        const hostname = container.Id.slice(0, 12);
+        let value = JSON.stringify({});
+        try {
+            value = await redisClient.get(hostname);
+            value = JSON.parse(value);
+            console.log(value);
+        } catch (err) {
+            console.log(err);
+            console.error(err);
+        }
+        workers.push({
+            hostname,
+            // hostname: container.Names[0].substring(1).replace('good-takehome-assignment_', ''),
+            container_state: container.State,
+            ...value,
+        });
+    }
+
     res.status(200).json({
         numWorkers,
         numCompletedJobs,
         numPendingJobs,
         jobs: jobs.rows,
-        workers: [],
+        workers: workers,
     });
 });

@@ -4,6 +4,11 @@ import { DataGrid } from '@mui/x-data-grid';
 
 const columns = [
   { field: 'hostname', headerName: 'Hostname', width: 150 },
+  { field: 'container_state', headerName: 'Container State', width: 150 },
+  { field: 'status', headerName: 'Status', width: 150 },
+  { field: 'latest_job_id', headerName: 'Latest Job ID', width: 150 },
+  { field: 'latest_indices_length', headerName: 'Num of files currently processing', width: 150 },
+  { field: 'throughput', headerName: 'Throughput', width: 150 },
 ];
 
 export default function Workers(props) {

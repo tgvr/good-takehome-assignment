@@ -171,7 +171,7 @@ class Scheduler():
         job_state.unprocessed_file_indices.append(output_file_index)
         del job_state.wip_distribution[hostname]
         
-        worker_state.reset_job_info()
+        # worker_state.reset_job_info()
         self.delegate_tasks()
 
     def handle_job_added(self, data: dict):
@@ -257,7 +257,8 @@ class Scheduler():
 
         if self.tmp_jobs_completed:
             for job_id in self.tmp_jobs_completed:
-                del self.jobs[job_id]
+                if job_id in self.jobs:
+                    del self.jobs[job_id]
             self.tmp_jobs_completed = []
 
     def schedule_task_to_worker(self, job_id: str, hostname: str, task_type: str):

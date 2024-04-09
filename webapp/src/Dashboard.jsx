@@ -13,6 +13,8 @@ import Jobs from './Jobs';
 import Stats from './Stats';
 import Workers from './Workers';
 import CreateJob from './CreateJob';
+import SetWorkers from './SetWorkers';
+import Stack from '@mui/material/Stack';
 
 const defaultTheme = createTheme({
   palette: {
@@ -22,6 +24,7 @@ const defaultTheme = createTheme({
 
 export default function Dashboard() {
   const [openCreateModal, setOpenCreateModal] = React.useState(false);
+  const [openWorkerModal, setOpenWorkerModal] = React.useState(false);
   const [appState, setAppState] = React.useState(
     {
       numCompletedJobs: 0,
@@ -34,6 +37,9 @@ export default function Dashboard() {
   const toggleCreateModal = () => {
     setOpenCreateModal(!openCreateModal);
   }
+  const toggleWorkerModal = () => {
+    setOpenWorkerModal(!openWorkerModal);
+  }
 
   const getApplicationState = async () => {
     const res = await fetch("http://localhost:8000/api/get_application_state");
@@ -42,9 +48,9 @@ export default function Dashboard() {
       ...appState,
       ...data,
       jobs: data.jobs.map((job) => {return {id: job.jobid, ...job}}),
+      workers: data.workers.map((worker) => {return {id: worker.hostname, latest_indices_length: worker.latest_file_indices.length, ...worker}}),
     });
     console.log(data);
-    console.log(appState);
   };
 
   useEffect(() => {
@@ -67,7 +73,10 @@ export default function Dashboard() {
             >
               {"Takehome Assignment (Jobs and Workers)"}
             </Typography>
-            <CreateJob open={openCreateModal} toggleModal={toggleCreateModal} />
+            <Stack direction="row" spacing={2}>
+              <CreateJob open={openCreateModal} toggleModal={toggleCreateModal} />
+              <SetWorkers open={openWorkerModal} toggleModal={toggleWorkerModal} />
+            </Stack>
           </Toolbar>
         </MuiAppBar>
         <Box

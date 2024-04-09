@@ -33,8 +33,6 @@ services:
     image: redis
     hostname: redis
     restart: unless-stopped
-    volumes:
-      - ./mnt/data/redis/data:/data
 
   worker:
     image: localhost:5001/worker-img

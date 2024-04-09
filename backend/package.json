@@ -16,6 +16,7 @@
         "path": "latest",
         "amqplib": "latest",
         "dockerode": "latest",
-        "cors": "latest"
+        "cors": "latest",
+        "redis": "latest"
     }
 }
