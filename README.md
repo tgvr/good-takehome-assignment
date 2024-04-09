@@ -1,5 +1,7 @@
 # good-takehome-assignment
 
+<img width="1269" alt="image" src="https://github.com/tgvr/good-takehome-assignment/assets/18230127/7b231dd2-b1cb-4204-ba85-4f169363c23d">
+
 This repo contains my code for a short yet good takehome assignment from a early stage startup. The problem provides insights into the following skills:
 
 - Backend Development (using express.js + Typescript)
