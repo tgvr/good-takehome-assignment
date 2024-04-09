@@ -5,6 +5,7 @@ const { existsSync, mkdirSync, writeFileSync } = require('fs');
 const path = require('path');
 const amqp = require('amqplib');
 const { v4: uuidv4 } = require('uuid');
+const Docker = require('dockerode');
 
 const app = express(); 
 
@@ -17,6 +18,7 @@ const pool = new Pool({
     password: 'admin',
     port: 5432,
 });
+const docker = new Docker();
 
 async function createJobRecord(numValues, numFiles) {
     const client = await pool.connect();
@@ -91,20 +93,20 @@ app.post('/api/create_job', async (req, res) => {
     }
 
     const jobId = await createJobRecord(numValues, numFiles);
-    const { fileIdentifiers } = await createFiles(numValues, numFiles, jobId);
-    await updateJobStatus(jobId, 'input_files_created');
-
-    const messageToScheduler = {
-        "message_type": "job_added",
-        "job_id": jobId,
-        "num_original_files": numFiles,
-        "num_values": numValues,
-        "unprocessed_file_indices": fileIdentifiers,
-    }
-
-    console.log(`Message to scheduler: ${JSON.stringify(messageToScheduler)}`);
-    await sendMessageToQueue(messageToScheduler);
-
+    createFiles(numValues, numFiles, jobId).then(async ({ fileIdentifiers }) => {
+        updateJobStatus(jobId, 'input_files_created').then(() => {
+            const messageToScheduler = {
+                "message_type": "job_added",
+                "job_id": jobId,
+                "num_original_files": numFiles,
+                "num_values": numValues,
+                "unprocessed_file_indices": fileIdentifiers,
+            }
+        
+            console.log(`Message to scheduler: ${JSON.stringify(messageToScheduler)}`);
+            sendMessageToQueue(messageToScheduler);
+        });
+    });
     res.status(200).json({ jobId });
 });
 
@@ -115,13 +117,40 @@ app.post('/api/notify_job_completed', async (req, res) => {
     res.status(200).json({ jobId });
 });
 
-// app.post('/api/set_num_workers', async (req, res) => {
-//     const { numWorkers } = req.body;
-//     if (!Number.isInteger(numWorkers) || numWorkers <= 0) {
-//         res.status(400).json({ error: 'Invalid input. numWorkers must be a positive number.' });
-//         return;
-//     }
+app.post('/api/set_num_workers', async (req, res) => {
+    const { numWorkers } = req.body;
+    if (!Number.isInteger(numWorkers) || numWorkers <= 0) {
+        res.status(400).json({ error: 'Invalid input. numWorkers must be a positive number.' });
+        return;
+    }
 
-//     // Check number of worker replica docker containers present, return error if numWorkers is less than the current number of replicas
-//     // Otherwise, connect to docker client and spawn new worker containers
-// });
+    const containers = await docker.listContainers();
+    const filteredContainers = containers.filter(container => container.Image === "localhost:5001/worker-img");
+    const numContainers = filteredContainers.length;
+
+    if (numWorkers < numContainers) {
+        res.status(400).json({ error: 'Number of worker containers cannot be less than the current number of replicas.' });
+        return;
+    }
+
+    const extraContainers = numWorkers - numContainers;
+    for (let i = 0; i < extraContainers; i++) {
+        docker.createContainer({
+            Image: 'localhost:5001/worker-img',
+            Env: [
+                'PYTHONUNBUFFERED=1',
+            ],
+            RestartPolicy: {
+                Name: 'unless-stopped',
+            },
+            HostConfig: {
+                Binds: [
+                    '/Users/tgavara/Developer/good-takehome-assignment/mnt/data/jobs:/data/jobs',
+                ],
+                NetworkMode: 'good-takehome-assignment_default',
+            },
+        }).then(container => container.start());
+    }
+
+    res.status(200).json({ numWorkers });
+});

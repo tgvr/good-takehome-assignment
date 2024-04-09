@@ -21,6 +21,7 @@ services:
       - postgres_db
     volumes:
       - ./mnt/data/jobs:/data/jobs
+      - /var/run/docker.sock:/var/run/docker.sock
 
   rabbitmq:
     image: rabbitmq:3-management

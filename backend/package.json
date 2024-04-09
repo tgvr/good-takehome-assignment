@@ -14,6 +14,7 @@
         "fs": "latest",
         "uuid": "latest",
         "path": "latest",
-        "amqplib": "latest"
+        "amqplib": "latest",
+        "dockerode": "latest"
     }
 }

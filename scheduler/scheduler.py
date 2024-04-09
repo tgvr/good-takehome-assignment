@@ -205,7 +205,6 @@ class Scheduler():
             if not free_workers:
                 return
 
-            log.info('p3')
             # Case 1: Job has no unprocessed files (assert that it has a wip_distribution)
             if not job_state.unprocessed_file_indices:
                 assert job_state.wip_distribution
