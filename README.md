@@ -3,18 +3,12 @@
 <img width="1269" alt="image" src="https://github.com/tgvr/good-takehome-assignment/assets/18230127/7b231dd2-b1cb-4204-ba85-4f169363c23d">
 <img width="600" alt="image" src="https://github.com/tgvr/good-takehome-assignment/assets/18230127/d9d82fa1-adda-41d4-abe1-2229bd8e2362">
 
+## Components used:
 
-This repo contains my code for a short yet good takehome assignment from a early stage startup. The problem provides insights into the following skills:
-
-- Backend Development (using express.js + Typescript)
-- Setting up and using message queues + basics of designing and working with distributed systems
-- Webapp Development (I chose React.js + vite + Material UI component library)
-- Building a Scheduler that breaks down jobs into tasks and assigns them to Workers. The Scheduler focuses on minimizing the execution time for job picked first.
-- Building a fleet of Worker nodes which register themselves with the Scheduler and process the tasks assigned to them.
-- Building and deploying containerized applications (using Docker).
-- Some barebones level of SQL code.
-- Modelling HLD given the problem statement and comparing and contrasting tradeoffs between potential approaches.
-- Storing certain type of data in Redis
+- Backend: node.js, express.js
+- Frontend: React.js, vite, Material UI component library
+- Database: Postgres
+- Other: Docker, Redis, RabbitMQ
 
 ## Instructions:
 
