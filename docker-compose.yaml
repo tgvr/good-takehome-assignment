@@ -48,3 +48,11 @@ services:
     depends_on:
       - rabbitmq
       - worker
+
+  webapp:
+    image: localhost:5001/webapp-img
+    restart: unless-stopped
+    ports:
+      - 8080:8080
+    depends_on:
+      - backend
